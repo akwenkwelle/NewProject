@@ -1,0 +1,247 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This is a network with one vpc,4 subnets; 2 private, 2 public",
+    "Metadata": {
+
+    },
+    "Parameters": {
+      "myVpcCidr": {
+          "Description": "Cidr for vpc",
+          "Type": "String",
+          "Default": "10.0.0.0/16"
+      },
+      "Az1": {
+          "Description": "AvailabilityZone1 for my network",
+          "Type": "AWS::EC2::AvailabilityZone::Name"
+
+      },
+      "myPrvtSubnet1Cidr": {
+          "Description": "Cidr for private subnet 1",
+          "Type": "String",
+          "Default": "10.0.1.0/24"
+      },
+      "Az2": {
+          "Description": "AvailabilityZone2 for my network ",
+          "Type": "AWS::EC2::AvailabilityZone::Name"
+
+      },
+      "myPrvtSubnet2Cidr": {
+          "Description": "Cidr for private subnet 2",
+          "Type": "String",
+          "Default": "10.0.3.0/24"
+      },
+      "myPubSubnet1Cidr": {
+          "Description": "Cidr for public subnet 1",
+          "Type": "String",
+          "Default": "10.0.2.0/24"
+      },
+      "myPubSubnet2Cidr": {
+          "Description": "Cidr for public subnet 2",
+          "Type": "String",
+          "Default": "10.0.4.0/24"
+      }
+
+    },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+      "myVpc": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+          "CidrBlock": { "Ref": "myVpcCidr" },
+          "Tags": [{ "Key": "Name", "Value":  "My-VPC" }]
+        }
+      },
+      "myPrvtSubnet1": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Az1" },
+          "VpcId": { "Ref": "myVpc" },
+          "CidrBlock": { "Ref": "myPrvtSubnet1Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "My-Private-Subnet1" }]
+        }
+      },
+      "myPrvtSubnet2": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Az2" },
+          "VpcId": { "Ref": "myVpc" },
+          "CidrBlock": { "Ref": "myPrvtSubnet2Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "My-Private-Subnet2" }]
+        }
+      },
+      "myPubSubnet1": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Az1" },
+          "VpcId": { "Ref": "myVpc" },
+          "CidrBlock": { "Ref": "myPubSubnet1Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "My-Public-Subnet1" }]
+        }
+      },
+      "myPubSubnet2": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Az2" },
+          "VpcId": { "Ref": "myVpc" },
+          "CidrBlock": { "Ref": "myPubSubnet2Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "My-Public-Subnet2" }]
+        }
+      },
+      "myIGW": {
+        "Type": "AWS::EC2::InternetGateway",
+        "Properties": {
+          "Tags": [{ "Key": "Name", "Value":  "My-IGW" }]
+        }
+      },
+      "AttachGateway": {
+        "Type": "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "VpcId": { "Ref": "myVpc" },
+          "InternetGatewayId": { "Ref": "myIGW" }
+        }
+      },
+      "myPrvtRT": {
+        "Type": "AWS::EC2::RouteTable",
+        "Properties": {
+          "VpcId": { "Ref": "myVpc" },
+          "Tags": [{ "Key": "Name", "Value":  "My-Private-RT" }]
+        }
+      },
+      "PrvtrouteTableAssoc1": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "myPrvtSubnet1" },
+          "RouteTableId": { "Ref": "myPrvtRT" }
+        }
+      },
+      "PrvtrouteTableAssoc2": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "myPrvtSubnet2" },
+          "RouteTableId": { "Ref": "myPrvtRT" }
+        }
+      },
+      "myEip": {
+        "Type": "AWS::EC2::EIP",
+        "Properties": {
+          "Domain": "vpc"
+        }
+      },
+      "myNATGateWay" : {
+   "Type" : "AWS::EC2::NatGateway",
+   "Properties" : {
+      "AllocationId" : { "Fn::GetAtt" : ["myEip", "AllocationId"]},
+      "SubnetId" : { "Ref" : "myPubSubnet1"},
+      "Tags" : [ {"Key" : "Name", "Value" : "myNATGateWay" } ]
+     }
+},
+"myPrivateRoute": {
+  "Type": "AWS::EC2::Route",
+  "Properties": {
+    "RouteTableId": { "Ref": "myPrvtRT" },
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": { "Ref": "myNATGateWay" }
+  }
+},
+"myPublicRT": {
+  "Type": "AWS::EC2::RouteTable",
+  "Properties": {
+    "VpcId": { "Ref": "myVpc" },
+    "Tags": [{ "Key": "Name", "Value":  "my-Public-RT" }]
+  }
+},
+"PubrouteTableAssoc1": {
+  "Type": "AWS::EC2::SubnetRouteTableAssociation",
+  "Properties": {
+    "SubnetId": { "Ref": "myPubSubnet1" },
+    "RouteTableId": { "Ref": "myPublicRT" }
+  }
+},
+"PubrouteTableAssoc2": {
+  "Type": "AWS::EC2::SubnetRouteTableAssociation",
+  "Properties": {
+    "SubnetId": { "Ref": "myPubSubnet2" },
+    "RouteTableId": { "Ref": "myPublicRT" }
+  }
+},
+"myPublicRoute": {
+  "Type": "AWS::EC2::Route",
+  "Properties": {
+    "RouteTableId": { "Ref": "myPublicRT" },
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": { "Ref": "myIGW" }
+  }
+},
+"myexternalSG" : {
+  "Type" : "AWS::EC2::SecurityGroup",
+  "Properties" : {
+    "GroupDescription" : "Allow ssh and http port 22 and 80",
+    "SecurityGroupIngress" : [
+    { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+    { "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0" }
+    ],
+    "VpcId" : { "Ref": "myVpc" },
+    "Tags" :  [ { "Key": "Name", "Value":  "my-external-SG" } ]
+  }
+},
+"myinternalSG" : {
+  "DependsOn":"myexternalSG",
+  "Type" : "AWS::EC2::SecurityGroup",
+  "Properties" : {
+    "GroupDescription" : "Allow all traffic from myexternalSG",
+    "SecurityGroupIngress" : [
+    { "IpProtocol" : "-1",  "SourceSecurityGroupId" : { "Ref": "myexternalSG" } }
+    ],
+    "VpcId" : { "Ref": "myVpc" },
+    "Tags" :  [ { "Key": "Name", "Value":  "My-Internal-SG" } ]
+  }
+}
+
+
+    },
+    "Outputs": {
+      "myVpcID" : {
+        "Description":"ID for my Vpc",
+        "Value" : { "Ref": "myVpc" },
+        "Export":{"Name":"my-vpc-id"}
+      },
+      "myPrvtSubnet1ID" : {
+        "Description":"private subnet1 id",
+        "Value" : { "Ref": "myPrvtSubnet1" },
+        "Export":{"Name":"my-prvtsubnet1-id"}
+      },
+      "myPrvtSubnet2ID" : {
+        "Description":"private subnet2 id",
+        "Value" : { "Ref": "myPrvtSubnet2" },
+        "Export":{"Name":"my-prvtsubnet2-id"}
+      },
+      "myPubSubnet1" : {
+        "Description":"public subnet1 id",
+        "Value" : { "Ref": "myPubSubnet1" },
+        "Export":{"Name":"my-publicsubnet1-id"}
+      },
+      "myPubSubnet2" : {
+        "Description":"public subnet2 id",
+        "Value" : { "Ref": "myPubSubnet2" },
+        "Export":{"Name":"my-publicsubnet2-id"}
+      },
+      "externalSgID" : {
+        "Description":"ID for external SG",
+        "Value" : { "Ref": "myexternalSG" },
+        "Export":{"Name":"my-externalSG-id"}
+      },
+      "internalSgID" : {
+        "Description":"ID for internal SG",
+        "Value" : { "Ref": "myinternalSG" },
+        "Export":{"Name":"my-internalSG-id"}
+      }
+
+
+
+    }
+}
